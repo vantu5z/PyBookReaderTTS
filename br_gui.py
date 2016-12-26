@@ -52,6 +52,13 @@ class TextViewWindow(Gtk.Window):
         self.grid = Gtk.Grid()
         self.add(self.grid)
 
+        # клиент для чтения
+        self.rhvoice_client = SD.RHVoice_client(self)
+
+        # установка настроек
+        self.PBR_Pref = PD.Preferences(self.rhvoice_client)
+
+        # Создаём управляеющие элементы
         self.create_mainmenu()
         self.create_textview()
         self.create_toolbar()
@@ -59,12 +66,6 @@ class TextViewWindow(Gtk.Window):
 
         # для разделения на участки и получения текста из GUI
         self.TTR = TextToRead(self)
-
-        # клиент для чтения
-        self.rhvoice_client = SD.RHVoice_client(self)
-
-        # установка настроек
-        self.PBR_Pref = PD.Preferences(self.rhvoice_client)
 
     def create_mainmenu(self):
         """ Создание главного меню """
@@ -93,7 +94,11 @@ class TextViewWindow(Gtk.Window):
     def create_toolbar(self):
         """Создание панели иструментов с кнопками управления"""
         toolbar = Gtk.Toolbar()
-        toolbar.set_style(2)
+        # устанавливаем начальный стиль для кнопок (с текстом или без)
+        if self.PBR_Pref.labels_for_toolbuttons and toolbar != None:
+            toolbar.set_style(2)
+        else:
+            toolbar.set_style(0)
         self.grid.attach(toolbar, 0, 1, 3, 1)
 
         button_prev = Gtk.ToolButton()
@@ -178,11 +183,14 @@ class TextViewWindow(Gtk.Window):
 
         # ползунок для настройки скорости чтения
         speech_rate = Gtk.HScale.new_with_range(-100, 100, 1)
-        speech_rate.set_value(0)
+        # начальное значение
+        speech_rate.set_value(self.PBR_Pref.speech_rate)
         speech_rate.set_hexpand(True)
         speech_rate.connect("value-changed", self.speech_rate_changed)
         self.grid.attach_next_to(speech_rate, check_wordwrap,
                                  Gtk.PositionType.RIGHT, 1, 1)
+        # применяем изменения
+        self.speech_rate_changed(speech_rate)
 
     # обработка нажатия на кнопки управления
     #=========================================================
@@ -260,6 +268,7 @@ class TextViewWindow(Gtk.Window):
         if rate != None:
             rate = int(rate)
             self.rhvoice_client.set_rate(rate)
+            self.PBR_Pref.speech_rate = rate
 
     def on_preferences_clicked(self, widget):
         """ Вызов диалога настройки """
@@ -347,7 +356,7 @@ class TextToRead():
         self.indent_sentences = None
         # номер текущего предложения
         self.current_sentence_n = 0
-        
+
         # установка переменных по первому абзацу текста
         self.get_current_text()
 
@@ -495,8 +504,10 @@ class TextToRead():
 def exit_app(self, widget):
     """
     Выход из программы
-    с завершением всех запущенных потоков и остановкой чтения
+	сохранением настроек и
+    завершением всех запущенных потоков и остановкой чтения
     """
+    self.PBR_Pref.save_settings()
     self.rhvoice_client.stop()
     self.rhvoice_client.exit_signal = True
     self.rhvoice_client.event_idle_status.set()

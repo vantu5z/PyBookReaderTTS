@@ -9,6 +9,9 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
+import configparser
+import os.path
+
 class PreferencesDialog(Gtk.Window):
     """
     Диалог настроек
@@ -30,11 +33,14 @@ class PreferencesDialog(Gtk.Window):
         label_view_pref = Gtk.Label('Настройка интерфейса:')
         self.page_view.add(label_view_pref)
         check_tool_text = Gtk.CheckButton("Подписать кнопки управления")
-        check_tool_text.set_active(True)
+        # начальное значение
+        check_tool_text.set_active(self.PBR_Pref.labels_for_toolbuttons)
         check_tool_text.connect("toggled", self.on_check_tool_text_toggled)
         self.page_view.attach_next_to(check_tool_text,label_view_pref,
                                       Gtk.PositionType.BOTTOM,1,1)
         self.notebook.append_page(self.page_view, Gtk.Label('Внешний вид'))
+        # показываем или прячем текст (взависимости от настройки)
+        self.on_check_tool_text_toggled(check_tool_text)
         #=====================================================================
 
         # Вкладка с настройками параметров чтения
@@ -101,6 +107,8 @@ class PreferencesDialog(Gtk.Window):
 
     def exit_pref_win(self, data=None):
         """ Выход из диалога """
+        # сохраняем настройки и выходим
+        self.PBR_Pref.save_settings()
         self.destroy()
 
     def on_combo_voice_changed(self, combo):
@@ -108,6 +116,7 @@ class PreferencesDialog(Gtk.Window):
         combo_text = combo.get_active_text()
         if combo_text != None:
             self.SD_client.set_voice(combo_text)
+            self.PBR_Pref.current_voice = combo_text
 
     def on_check_tool_text_toggled(self, widget):
         """ Включение / отключение подписывания кнопок в панели управления """
@@ -116,8 +125,10 @@ class PreferencesDialog(Gtk.Window):
         # включаем или отключаем текс у значков
         if widget.get_active() == True and toolbar != None:
             toolbar.set_style(2)
+            self.PBR_Pref.labels_for_toolbuttons = True
         else:
             toolbar.set_style(0)
+            self.PBR_Pref.labels_for_toolbuttons = False
 
     def on_spin_indent_delay_changed(self, widget):
         """ Изменение задержки для абзаца """
@@ -136,24 +147,70 @@ class Preferences():
         """ Инициализация настроек """
         # клиент speech-dispatcher для получения списка голосов
         self.SD_client = SD_client
+
+        # открываем файл конфигурации или создаём новый, если его нет
+        self.config = configparser.ConfigParser()
+        if not os.path.exists('pbr.conf'):
+            self.set_default_conf()
+        self.config.read('pbr.conf')
+        self.settings = self.config['Settings']
+
+        # список доступных голосов
         self.list_of_voices = self.SD_client.get_voices_list()
+        # текущий голос
         self.current_voice = self.get_current_voice()
         # значения задержек для абзаца и предложения
         self.indent_delay = self.get_indent_delay()
         self.sentance_delay = self.get_sentance_delay()
+        # показывать ли текст у кнопок на панели
+        self.labels_for_toolbuttons = self.get_labels_for_toolbuttons()
+        # скорость чтения
+        self.speech_rate = self.get_speech_rate()
 
         # Устанавливаем текущий голос
         self.SD_client.set_voice(self.current_voice)
 
+    def set_default_conf(self):
+        """ Установка настроек по умолчанию """
+        self.config['Settings'] = {'current_voice': 'Aleksandr+Alan',
+                                   'indent_delay': '400',
+                                   'sentance_delay': '200', 
+                                   'speech_rate': '0', 
+                                   'labels_for_toolbuttons': 'True'}
+        with open('pbr.conf', 'w') as configfile:
+            self.config.write(configfile)
+
+    def save_settings(self):
+        """ Сохранение настроек в файл """
+        self.config['Settings'] = {'current_voice': self.current_voice,
+                                   'indent_delay': self.indent_delay,
+                                   'sentance_delay': self.sentance_delay,
+                                   'speech_rate': self.speech_rate,
+                                   'labels_for_toolbuttons': self.labels_for_toolbuttons}
+        with open('pbr.conf', 'w') as configfile:
+            self.config.write(configfile)
+
     def  get_current_voice(self):
         """ Получаем текущий голос из conf файла """
-        voice = 'Aleksandr+Alan'
+        voice = self.settings.get('current_voice')
         return voice
 
     def  get_indent_delay(self):
         """ Получаем задержку чтения между абзацами из conf файла"""
-        return 400
+        delay = self.settings.getint('indent_delay')
+        return delay
 
     def  get_sentance_delay(self):
         """ Получаем задержку чтения между предложениями из conf файла """
-        return 200
+        delay = self.settings.getint('sentance_delay')
+        return delay
+
+    def get_labels_for_toolbuttons(self):
+        """ Получаем из conf файла - подписывать ли кнопки на панели (да/нет) """
+        labels = self.settings.getboolean('labels_for_toolbuttons')
+        return labels
+
+    def get_speech_rate(self):
+        """ Получаем скорость чтения (-100 .. +100) из conf файла """
+        rate = self.settings.getint('speech_rate')
+        return rate
