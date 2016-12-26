@@ -75,6 +75,7 @@ class PreferencesDialog(Gtk.Window):
         self.page_voice.attach_next_to(spin_indent_delay,
                                        label_indent_delay,
                                        Gtk.PositionType.RIGHT, 1, 1)
+        spin_indent_delay.set_tooltip_markup('Задержка перед абзацем в миллисекундах')
         spin_indent_delay.connect("changed",
                                   self.on_spin_indent_delay_changed)
 
@@ -87,6 +88,7 @@ class PreferencesDialog(Gtk.Window):
         self.page_voice.attach_next_to(spin_sentance_delay,
                                        label_sentance_delay,
                                        Gtk.PositionType.RIGHT, 1, 1)
+        spin_sentance_delay.set_tooltip_markup('Задержка перед предложением в миллисекундах')
         spin_sentance_delay.connect("changed",
                                     self.on_spin_sentance_delay_changed)
 

@@ -186,6 +186,7 @@ class TextViewWindow(Gtk.Window):
         # начальное значение
         speech_rate.set_value(self.PBR_Pref.speech_rate)
         speech_rate.set_hexpand(True)
+        speech_rate.set_tooltip_markup('Скорость чтения от -100 до 100')
         speech_rate.connect("value-changed", self.speech_rate_changed)
         self.grid.attach_next_to(speech_rate, check_wordwrap,
                                  Gtk.PositionType.RIGHT, 1, 1)
