@@ -18,6 +18,7 @@ class RHVoice_client():
         self._client = speechd.SSIPClient('bookreader')
         self._client.set_output_module('rhvoice')
         self._client.set_language('ru')
+        self._client.set_priority('text')
         # Здесь можно добавить выбор голоса
         # и прочие параметры воспроизведения
 
@@ -39,7 +40,7 @@ class RHVoice_client():
 
     def rh_speak(self, text):
         """ Чтение переданного текста """
-        def callback_event(callback_type):  
+        def callback_event(callback_type):
             """ Обратная реакция от клиента """
             if callback_type == speechd.CallbackType.BEGIN:
                 print("Воиспроизведение.")
@@ -50,6 +51,10 @@ class RHVoice_client():
                 self.event_idle_status.set()
             elif callback_type == speechd.CallbackType.CANCEL:
                 print("Воспр. прервано.")
+                # если прервано другим клиентом
+                if self.reading and not self.ended:
+                    self.back_sentacne()
+                    self.event_idle_status.set()
         self._client.speak(text, callback=callback_event,
                            event_types=(speechd.CallbackType.BEGIN,
                                         speechd.CallbackType.CANCEL,
@@ -128,6 +133,11 @@ class RHVoice_client():
         """ Продолжение чтения с начала предложения """
         self.playing = True
         self.event_idle_status.set()
+
+    def back_sentacne(self):
+        """ Возврат на предыдущее предложение или абзац """
+        if not self.win.TTR.get_prev_sentence():
+                self.win.TTR.get_prev_text()
 
     def get_voices_list(self):
         """ Получаем список доступных голосов """
