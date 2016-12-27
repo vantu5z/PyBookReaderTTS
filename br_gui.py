@@ -9,7 +9,7 @@
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 import re
 
 # модули программы
@@ -58,6 +58,9 @@ class TextViewWindow(Gtk.Window):
         # установка настроек
         self.PBR_Pref = PD.Preferences(self.rhvoice_client)
 
+        # устанавливаем горячие клавиши
+        self.set_accel_keys()
+
         # Создаём управляеющие элементы
         self.create_mainmenu()
         self.create_textview()
@@ -67,11 +70,16 @@ class TextViewWindow(Gtk.Window):
         # для разделения на участки и получения текста из GUI
         self.TTR = TextToRead(self)
 
+    def set_accel_keys(self):
+        """ Установка горячих клавиш """
+        self.accel_group = Gtk.AccelGroup()
+        self.add_accel_group(self.accel_group)
+
     def create_mainmenu(self):
         """ Создание главного меню """
         mainmenu = Gtk.MenuBar()
         self.grid.attach(mainmenu, 0, 0, 3, 1)
-        for label in ["Файл", "Правка", "Справка"]:
+        for label in ["Файл", "Правка", "Чтение", "Справка"]:
             mi=Gtk.MenuItem(label)
             mainmenu.add(mi)
             if label == "Файл":
@@ -79,16 +87,63 @@ class TextViewWindow(Gtk.Window):
                 m_item=Gtk.MenuItem("Открыть")
                 m_item.connect("activate", self.open_book_file)
                 mi2.add(m_item)
+                # сочетание ctrl+O
+                m_item.add_accelerator("activate", self.accel_group, ord('O'),
+                                        Gdk.ModifierType.CONTROL_MASK,
+                                        Gtk.AccelFlags.VISIBLE)
 
                 m_item=Gtk.MenuItem("Выйти")
                 m_item.connect("activate", self.close_app)
                 mi2.add(m_item)
+                # сочетание ctrl+Q
+                m_item.add_accelerator("activate", self.accel_group, ord('Q'),
+                                        Gdk.ModifierType.CONTROL_MASK,
+                                        Gtk.AccelFlags.VISIBLE)
                 mi.set_submenu(mi2)
+
             if label == "Правка":
                 mi2=Gtk.Menu()
                 m_item=Gtk.MenuItem("Параметры")
                 m_item.connect("activate", self.on_preferences_clicked)
                 mi2.add(m_item)
+                mi.set_submenu(mi2)
+                # сочетание ctrl+P
+                m_item.add_accelerator("activate", self.accel_group, ord('P'),
+                                        Gdk.ModifierType.CONTROL_MASK,
+                                        Gtk.AccelFlags.VISIBLE)
+            if label == "Чтение":
+                mi2=Gtk.Menu()
+                m_item=Gtk.MenuItem("Читать")
+                m_item.connect("activate", self.on_play_button_clicked)
+                mi2.add(m_item)
+                # сочетание ctrl+enter
+                m_item.add_accelerator("activate", self.accel_group, 65293,
+                                        Gdk.ModifierType.CONTROL_MASK,
+                                        Gtk.AccelFlags.VISIBLE)
+
+                m_item=Gtk.MenuItem("Вперёд")
+                m_item.connect("activate", self.on_next_button_clicked)
+                mi2.add(m_item)
+                # сочетание ctrl+right
+                m_item.add_accelerator("activate", self.accel_group, 65363,
+                                        Gdk.ModifierType.CONTROL_MASK,
+                                        Gtk.AccelFlags.VISIBLE)
+
+                m_item=Gtk.MenuItem("Назад")
+                m_item.connect("activate", self.on_prev_button_clicked)
+                mi2.add(m_item)
+                # сочетание ctrl+left
+                m_item.add_accelerator("activate", self.accel_group, 65361,
+                                        Gdk.ModifierType.CONTROL_MASK,
+                                        Gtk.AccelFlags.VISIBLE)
+
+                m_item=Gtk.MenuItem("Стоп")
+                m_item.connect("activate", self.on_stop_button_clicked)
+                mi2.add(m_item)
+                # сочетание ctrl+space
+                m_item.add_accelerator("activate", self.accel_group, 32,
+                                        Gdk.ModifierType.CONTROL_MASK,
+                                        Gtk.AccelFlags.VISIBLE)
                 mi.set_submenu(mi2)
 
     def create_toolbar(self):
