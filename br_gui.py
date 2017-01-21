@@ -14,28 +14,8 @@ import re
 
 # модули программы
 import preferences_dialog as PD
+import search_dialog as SD
 import synth_client as SC
-
-class SearchDialog(Gtk.Dialog):
-    """
-    Диалог поиска
-    TODO: перенести в отдельный модуль, добавить функциональности
-    """
-    def __init__(self, parent):
-        Gtk.Dialog.__init__(self, "Поиск", parent,
-                            Gtk.DialogFlags.MODAL, buttons=(
-                            Gtk.STOCK_FIND, Gtk.ResponseType.OK,
-                            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL))
-
-        box = self.get_content_area()
-
-        label = Gtk.Label("Введите текст для поиска:")
-        box.add(label)
-
-        self.entry = Gtk.Entry()
-        box.add(self.entry)
-
-        self.show_all()
 
 class TextViewWindow(Gtk.Window):
     """
@@ -354,7 +334,7 @@ class TextViewWindow(Gtk.Window):
 
     def on_search_clicked(self, widget):
         """ Обработка диалога поиска """
-        dialog = SearchDialog(self)
+        dialog = SD.SearchDialog(self)
         response = dialog.run()
         if response == Gtk.ResponseType.OK:
             self.clear_selections()
@@ -363,7 +343,7 @@ class TextViewWindow(Gtk.Window):
             if start.get_offset() == self.textbuffer.get_char_count():
                 start = self.textbuffer.get_start_iter()
 
-            self.search_and_mark(dialog.entry.get_text(), start)
+            self.search_and_mark(dialog.get_search_text(), start)
 
         dialog.destroy()
 
