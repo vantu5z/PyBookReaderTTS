@@ -14,8 +14,7 @@ import re
 
 # модули программы
 import preferences_dialog as PD
-import rhvoice_client as SD
-
+import synth_client as SC
 
 class SearchDialog(Gtk.Dialog):
     """
@@ -24,9 +23,9 @@ class SearchDialog(Gtk.Dialog):
     """
     def __init__(self, parent):
         Gtk.Dialog.__init__(self, "Поиск", parent,
-            Gtk.DialogFlags.MODAL, buttons=(
-            Gtk.STOCK_FIND, Gtk.ResponseType.OK,
-            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL))
+                            Gtk.DialogFlags.MODAL, buttons=(
+                            Gtk.STOCK_FIND, Gtk.ResponseType.OK,
+                            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL))
 
         box = self.get_content_area()
 
@@ -52,16 +51,20 @@ class TextViewWindow(Gtk.Window):
         self.grid = Gtk.Grid()
         self.add(self.grid)
 
+        # флаг занятости
+        self.progress = False
+
         # клиент для чтения
-        self.rhvoice_client = SD.RHVoice_client(self)
+        self.synth_client = SC.SynthClient(self)
 
         # установка настроек
-        self.PBR_Pref = PD.Preferences(self.rhvoice_client)
+        self.PBR_Pref = PD.Preferences(self.synth_client)
 
-        # устанавливаем горячие клавиши
-        self.set_accel_keys()
+        # создание группы для горячих клавиш
+        self.accel_group = Gtk.AccelGroup()
+        self.add_accel_group(self.accel_group)
 
-        # Создаём управляеющие элементы
+        # создание управляеющих элементов
         self.create_mainmenu()
         self.create_textview()
         self.create_toolbar()
@@ -70,14 +73,9 @@ class TextViewWindow(Gtk.Window):
         # для разделения на участки и получения текста из GUI
         self.TTR = TextToRead(self)
 
-    def set_accel_keys(self):
-        """ Установка горячих клавиш """
-        self.accel_group = Gtk.AccelGroup()
-        self.add_accel_group(self.accel_group)
-
     def create_mainmenu(self):
         """ Создание главного меню """
-        mainmenu = Gtk.MenuBar()
+        mainmenu = Gtk.MenuBar.new()
         self.grid.attach(mainmenu, 0, 0, 3, 1)
         for label in ["Файл", "Правка", "Чтение", "Справка"]:
             mi=Gtk.MenuItem(label)
@@ -150,7 +148,7 @@ class TextViewWindow(Gtk.Window):
         """Создание панели иструментов с кнопками управления"""
         toolbar = Gtk.Toolbar()
         # устанавливаем начальный стиль для кнопок (с текстом или без)
-        if self.PBR_Pref.labels_for_toolbuttons and toolbar != None:
+        if self.PBR_Pref.labels_for_toolbuttons:
             toolbar.set_style(2)
         else:
             toolbar.set_style(0)
@@ -239,7 +237,7 @@ class TextViewWindow(Gtk.Window):
         # ползунок для настройки скорости чтения
         speech_rate = Gtk.HScale.new_with_range(-100, 100, 1)
         # начальное значение
-        speech_rate.set_value(self.PBR_Pref.speech_rate)
+        speech_rate.set_value(self.synth_client.get_rate())
         speech_rate.set_hexpand(True)
         speech_rate.set_tooltip_markup('Скорость чтения от -100 до 100')
         speech_rate.connect("value-changed", self.speech_rate_changed)
@@ -252,54 +250,61 @@ class TextViewWindow(Gtk.Window):
     #=========================================================
 
     def on_prev_button_clicked(self, widget):
-        """ Получаем предыдущий абзац текста """
-        if self.rhvoice_client.playing:
-            # переключаем чтение на предыдущий абзац
-            self.rhvoice_client.abord()
-            self.rhvoice_client.stoped = False
-            self.TTR.get_prev_text()
-            self.on_play_button_clicked(widget)
-        else:
-            # просто переключаемся на предыдущий абзац
-            self.rhvoice_client.stoped = False
-            self.TTR.get_prev_text()
-            self.mark_readtext(self.TTR.indent_pos[0], self.TTR.indent_pos[1])
+        """ Переключение на предыдущий абзац текста """
+        if self.progress == False:
+            self.progress = True
+            if self.synth_client.playing:
+                # переключаем чтение на предыдущий абзац
+                self.synth_client.abord()
+                self.TTR.get_prev_text()
+                self.mark_readtext(self.TTR.indent_pos[0], self.TTR.indent_pos[1])
+                self.on_play_button_clicked(widget)
+            else:
+                # просто переключаемся на предыдущий абзац
+                self.synth_client.stoped = False
+                self.TTR.get_prev_text()
+                self.mark_readtext(self.TTR.indent_pos[0], self.TTR.indent_pos[1])
+            self.progress = False
 
     def on_stop_button_clicked(self, widget):
         """ Останавливаем воспроизведение """
-        self.rhvoice_client.stop()
+        self.synth_client.stop()
 
     def on_play_button_clicked(self, widget):
         """" Обработка нажатия кнопки начала чтения """
-        self.rhvoice_client.ended = False
-        if self.rhvoice_client.stoped == True:
+        if self.synth_client.stoped == True:
             # восстанавливаем чтение, если оно было остановлено
-            self.rhvoice_client.resume()
-        elif self.rhvoice_client.reading == True:
+            self.synth_client.resume()
+        elif self.synth_client.playing:
             # если идёт чтение - не реагируем на нажатие
             pass
         else:
             # начинаем чтение, если есть что читать
             if self.TTR.get_current_text():
-                self.rhvoice_client.playing = True
-                self.rhvoice_client.event_idle_status.set()
+                self.synth_client.start_play()
+            elif self.TTR.get_next_text():
+                self.synth_client.start_play()
 
-    def on_next_button_clicked(self, widget):   
-        """ Получаем следующий абзац текста """
-        if self.rhvoice_client.playing:
-            # переключаем чтение на следующий абзац, если идёт чтение
-            self.rhvoice_client.abord()
-            self.rhvoice_client.stoped = False
-            if self.TTR.get_next_text():
-                self.on_play_button_clicked(widget)
+    def on_next_button_clicked(self, widget):
+        """ Переключение на следующий абзац текста """
+        if self.progress == False:
+            self.progress = True
+            if self.synth_client.playing:
+                # переключаем чтение на следующий абзац, если идёт чтение
+                self.synth_client.abord()
+                self.synth_client.stoped = False
+                if self.TTR.get_next_text():
+                    self.mark_readtext(self.TTR.indent_pos[0], self.TTR.indent_pos[1])
+                    self.on_play_button_clicked(widget)
+                else:
+                    self.synth_client.set_text_ending()
+                    self.clear_selections()
             else:
-                self.set_text_ending()
-                self.clear_selections()
-        else:
-            # просто переключаемся на следующий абзац
-            self.rhvoice_client.stoped = False
-            self.TTR.get_next_text()
-            self.mark_readtext(self.TTR.indent_pos[0], self.TTR.indent_pos[1])
+                # просто переключаемся на следующий абзац
+                self.synth_client.stoped = False
+                self.TTR.get_next_text()
+                self.mark_readtext(self.TTR.indent_pos[0], self.TTR.indent_pos[1])
+            self.progress = False
 
     #==========================================================
 
@@ -323,13 +328,12 @@ class TextViewWindow(Gtk.Window):
         rate = widget.get_value()
         if rate != None:
             rate = int(rate)
-            self.rhvoice_client.set_rate(rate)
-            self.PBR_Pref.speech_rate = rate
+            self.synth_client.set_rate(rate)
 
     def on_preferences_clicked(self, widget):
         """ Вызов диалога настройки """
         PD.PreferencesDialog(self, self.PBR_Pref,
-                             self.rhvoice_client)
+                             self.synth_client)
 
     def clear_selections(self):
         """ Очистка всех отметок в тексте """
@@ -375,7 +379,7 @@ class TextViewWindow(Gtk.Window):
             self.search_and_mark(text, match_end)
 
     def mark_readtext(self, start, end):
-        """ Отмечаем текст для чтения """
+        """ Выделение текста для чтения """
         self.clear_selections()
         self.textbuffer.apply_tag(self.tag_readtext, start, end)
 
@@ -385,16 +389,11 @@ class TextViewWindow(Gtk.Window):
         txt = f.read()
         return txt
 
-    def set_text_ending(self):
-        """ Завершение чтения, в конце текста """
-        self.rhvoice_client.ended = True
-        self.rhvoice_client.playing = False
-
     def close_app(self, widget):
         """ Закрытие окна программы с последующим выходом """
         self.close()
 
-class TextToRead():
+class TextToRead(object):
     """
     Управление текстом для чтения.
     Получение текста и переход по абзаца и предложениям.
@@ -405,16 +404,16 @@ class TextToRead():
         # для доступа к данным в текстовом окне
         self.textbuffer = win.textbuffer
         # номер абзаца для чтения
-        self.indent_num = 0
-        # позиция части текста для чтения x,y : iter
+        self.indent_num = -1
+        # позиция участка текста для чтения x,y : iter
         self.indent_pos = None
         # абзац разбитый на предложения
-        self.indent_sentences = None
+        self.indent_sentences = []
         # номер текущего предложения
         self.current_sentence_n = 0
 
         # установка переменных по первому абзацу текста
-        self.get_current_text()
+        self.get_next_text()
 
     def get_sentence_pos(self, nomber):
         """ Получаем координаты указанного (nomber) предложения,
@@ -480,7 +479,7 @@ class TextToRead():
         else:
             return False
 
-    def split_to_sentence(self, text):
+    def split_to_sentences(self, text):
         """ Разбиваем абзац на предложения """
         tmp_list = []
         text = text.replace('\n','')
@@ -517,7 +516,7 @@ class TextToRead():
 
         else:
             # сообщаем, что дошли до конца текста
-            self.win.set_text_ending()
+            self.win.synth_client.set_text_ending()
             start = self.textbuffer.get_end_iter()
             end = start
 
@@ -534,9 +533,8 @@ class TextToRead():
             txt = False
             self.indent_sentences = None
         else:
-            # разбиваем текст на предложение
-            self.split_to_sentence(txt)
-
+            # разбиваем текст на предложения
+            self.split_to_sentences(txt)
         return txt
 
     def get_next_text(self):
@@ -563,12 +561,9 @@ def exit_app(self, widget):
 	сохранением настроек и
     завершением всех запущенных потоков и остановкой чтения
     """
+    self.synth_client.save_rate()
     self.PBR_Pref.save_settings()
-    self.rhvoice_client.stop()
-    self.rhvoice_client.exit_signal = True
-    self.rhvoice_client.event_idle_status.set()
-    self.rhvoice_client.thread_play.join(1)
-    self.rhvoice_client._client.close()
+    self.synth_client.exit()
     Gtk.main_quit()
 
 def main():

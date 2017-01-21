@@ -3,3 +3,4 @@
 /.vscode
 /.eric6project/
 /pbr.conf
+/synth_conf/__pycache__

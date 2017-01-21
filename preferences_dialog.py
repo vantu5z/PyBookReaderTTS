@@ -140,14 +140,13 @@ class PreferencesDialog(Gtk.Window):
         """ Изменение задержки для предложения """
         self.PBR_Pref.sentance_delay = widget.get_value_as_int()
 
-class Preferences():
+class Preferences(object):
     """
     Обработка настроек (хранение, чтение, запись)
-    TODO: добавить работу с файлом настроек
     """
     def __init__(self, SD_client):
         """ Инициализация настроек """
-        # клиент speech-dispatcher для получения списка голосов
+        # клиент для получения списка голосов
         self.SD_client = SD_client
 
         # открываем файл конфигурации или создаём новый, если его нет
@@ -157,45 +156,28 @@ class Preferences():
         self.config.read('pbr.conf')
         self.settings = self.config['Settings']
 
-        # список доступных голосов
-        self.list_of_voices = self.SD_client.get_voices_list()
-        # текущий голос
-        self.current_voice = self.get_current_voice()
         # значения задержек для абзаца и предложения
         self.indent_delay = self.get_indent_delay()
         self.sentance_delay = self.get_sentance_delay()
         # показывать ли текст у кнопок на панели
         self.labels_for_toolbuttons = self.get_labels_for_toolbuttons()
-        # скорость чтения
-        self.speech_rate = self.get_speech_rate()
-
-        # Устанавливаем текущий голос
-        self.SD_client.set_voice(self.current_voice)
 
     def set_default_conf(self):
         """ Установка настроек по умолчанию """
-        self.config['Settings'] = {'current_voice': 'Aleksandr+Alan',
-                                   'indent_delay': '400',
+        self.config['Settings'] = {'indent_delay': '400',
                                    'sentance_delay': '200', 
-                                   'speech_rate': '0', 
                                    'labels_for_toolbuttons': 'True'}
         with open('pbr.conf', 'w') as configfile:
             self.config.write(configfile)
 
     def save_settings(self):
         """ Сохранение настроек в файл """
-        self.config['Settings'] = {'current_voice': self.current_voice,
-                                   'indent_delay': self.indent_delay,
+        self.config['Settings'] = {'indent_delay': self.indent_delay,
                                    'sentance_delay': self.sentance_delay,
-                                   'speech_rate': self.speech_rate,
                                    'labels_for_toolbuttons': self.labels_for_toolbuttons}
         with open('pbr.conf', 'w') as configfile:
             self.config.write(configfile)
-
-    def  get_current_voice(self):
-        """ Получаем текущий голос из conf файла """
-        voice = self.settings.get('current_voice')
-        return voice
+        self.SD_client.save_curret_voice()
 
     def  get_indent_delay(self):
         """ Получаем задержку чтения между абзацами из conf файла"""
@@ -211,8 +193,3 @@ class Preferences():
         """ Получаем из conf файла - подписывать ли кнопки на панели (да/нет) """
         labels = self.settings.getboolean('labels_for_toolbuttons')
         return labels
-
-    def get_speech_rate(self):
-        """ Получаем скорость чтения (-100 .. +100) из conf файла """
-        rate = self.settings.getint('speech_rate')
-        return rate
