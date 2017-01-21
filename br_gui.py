@@ -10,6 +10,8 @@
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
+
+# для работы с регулярными выражениями
 import re
 
 # модули программы
@@ -27,11 +29,10 @@ class TextViewWindow(Gtk.Window):
         self.set_default_size(600, 400)
 
         # сетка для размещения элементов окна
-        # (кнопки, поля ввода и прочее)
         self.grid = Gtk.Grid()
         self.add(self.grid)
 
-        # флаг занятости
+        # флаг занятости при переходе между абзацами
         self.progress = False
 
         # клиент для чтения
@@ -194,10 +195,12 @@ class TextViewWindow(Gtk.Window):
 
         # формат выделения найденного текста
         self.tag_found = self.textbuffer.create_tag("found",
-                         background = "yellow", foreground = "black")
+                                    background = "yellow",
+                                    foreground = "black")
         # формат выделения текста для чтения
         self.tag_readtext = self.textbuffer.create_tag("readtext",
-                            background = "blue", foreground = "white")
+                                    background = "blue",
+                                    foreground = "white")
 
     def create_buttons(self):
         """Создание кнопок настройки и регулировки скорости"""
@@ -247,7 +250,7 @@ class TextViewWindow(Gtk.Window):
             self.progress = False
 
     def on_stop_button_clicked(self, widget):
-        """ Останавливаем воспроизведение """
+        """ Остановка воспроизведения """
         self.synth_client.stop()
 
     def on_play_button_clicked(self, widget):
@@ -274,7 +277,8 @@ class TextViewWindow(Gtk.Window):
                 self.synth_client.abord()
                 self.synth_client.stoped = False
                 if self.TTR.get_next_text():
-                    self.mark_readtext(self.TTR.indent_pos[0], self.TTR.indent_pos[1])
+                    self.mark_readtext(self.TTR.indent_pos[0],
+                                       self.TTR.indent_pos[1])
                     self.on_play_button_clicked(widget)
                 else:
                     self.synth_client.set_text_ending()
@@ -283,7 +287,8 @@ class TextViewWindow(Gtk.Window):
                 # просто переключаемся на следующий абзац
                 self.synth_client.stoped = False
                 self.TTR.get_next_text()
-                self.mark_readtext(self.TTR.indent_pos[0], self.TTR.indent_pos[1])
+                self.mark_readtext(self.TTR.indent_pos[0],
+                                   self.TTR.indent_pos[1])
             self.progress = False
 
     #==========================================================
@@ -291,9 +296,10 @@ class TextViewWindow(Gtk.Window):
     def open_book_file(self, widget):
         """ Диалог выбора файла книги для чтения"""
         dialog = Gtk.FileChooserDialog("Выберите книгу", self,
-            Gtk.FileChooserAction.OPEN,
-            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-             Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
+                                       Gtk.FileChooserAction.OPEN,
+                                       (Gtk.STOCK_CANCEL,
+                                       Gtk.ResponseType.CANCEL,
+                                       Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
 
         response = dialog.run()
         if response == Gtk.ResponseType.OK:
@@ -342,7 +348,7 @@ class TextViewWindow(Gtk.Window):
             start = self.textbuffer.get_iter_at_mark(cursor_mark)
             if start.get_offset() == self.textbuffer.get_char_count():
                 start = self.textbuffer.get_start_iter()
-
+            # получаем текст для поиска, ищем его и отмечаем
             self.search_and_mark(dialog.get_search_text(), start)
 
         dialog.destroy()
@@ -388,7 +394,7 @@ class TextToRead(object):
         # позиция участка текста для чтения x,y : iter
         self.indent_pos = None
         # абзац разбитый на предложения
-        self.indent_sentences = []
+        self.indent_sentences = None
         # номер текущего предложения
         self.current_sentence_n = 0
 
@@ -460,7 +466,7 @@ class TextToRead(object):
             return False
 
     def split_to_sentences(self, text):
-        """ Разбиваем абзац на предложения """
+        """ Разбиение абзаца на предложения """
         tmp_list = []
         text = text.replace('\n','')
 
@@ -478,11 +484,11 @@ class TextToRead(object):
             i += 1
 
         self.indent_sentences = tmp_list
-        # переводим указатель на первое предложение
+        # переводим указатель на первое предложение абзаца
         self.current_sentence_n = 0
 
     def get_current_text(self):
-        """ 
+        """
         Получаем координаты текущего абзаца, возвращаем его текст
         и разбиваем на предложения (пропуская пустые строки)
         """
@@ -537,9 +543,8 @@ class TextToRead(object):
 
 def exit_app(self, widget):
     """
-    Выход из программы
-	сохранением настроек и
-    завершением всех запущенных потоков и остановкой чтения
+    Выход из программы с сохранением настроек,
+    остановкой чтения и завершением всех запущенных потоков
     """
     self.synth_client.save_rate()
     self.PBR_Pref.save_settings()
