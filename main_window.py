@@ -239,13 +239,13 @@ class MainWindow(Gtk.Window):
             if self.synth_client.playing:
                 # переключаем чтение на предыдущий абзац
                 self.synth_client.abord()
-                self.TTR.get_prev_text()
+                self.TTR.get_prev_indent()
                 self.mark_readtext(self.TTR.indent_pos[0], self.TTR.indent_pos[1])
                 self.on_play_button_clicked(widget)
             else:
                 # просто переключаемся на предыдущий абзац
                 self.synth_client.stoped = False
-                self.TTR.get_prev_text()
+                self.TTR.get_prev_indent()
                 self.mark_readtext(self.TTR.indent_pos[0], self.TTR.indent_pos[1])
             self.progress = False
 
@@ -263,9 +263,9 @@ class MainWindow(Gtk.Window):
             pass
         else:
             # начинаем чтение, если есть что читать
-            if self.TTR.get_current_text():
+            if self.TTR.get_current_indent():
                 self.synth_client.start_play()
-            elif self.TTR.get_next_text():
+            elif self.TTR.get_next_indent():
                 self.synth_client.start_play()
 
     def on_next_button_clicked(self, widget):
@@ -276,7 +276,7 @@ class MainWindow(Gtk.Window):
                 # переключаем чтение на следующий абзац, если идёт чтение
                 self.synth_client.abord()
                 self.synth_client.stoped = False
-                if self.TTR.get_next_text():
+                if self.TTR.get_next_indent():
                     self.mark_readtext(self.TTR.indent_pos[0],
                                        self.TTR.indent_pos[1])
                     self.on_play_button_clicked(widget)
@@ -286,7 +286,7 @@ class MainWindow(Gtk.Window):
             else:
                 # просто переключаемся на следующий абзац
                 self.synth_client.stoped = False
-                self.TTR.get_next_text()
+                self.TTR.get_next_indent()
                 self.mark_readtext(self.TTR.indent_pos[0],
                                    self.TTR.indent_pos[1])
             self.progress = False
@@ -399,7 +399,7 @@ class TextToRead(object):
         self.current_sentence_n = 0
 
         # установка переменных по первому абзацу текста
-        self.get_next_text()
+        self.get_next_indent()
 
     def get_sentence_pos(self, nomber):
         """ Получаем координаты указанного (nomber) предложения,
@@ -436,7 +436,7 @@ class TextToRead(object):
                 txt = self.get_current_sentence()
                 return txt
             else:
-                if self.get_next_text():
+                if self.get_next_indent():
                     if len(self.indent_sentences) > 0:
                         txt = self.get_current_sentence()
                         return txt
@@ -455,7 +455,7 @@ class TextToRead(object):
                 txt = self.get_current_sentence()
                 return txt
             else:
-                self.get_prev_text()
+                self.get_prev_indent()
                 if len(self.indent_sentences) > 0:
                     self.current_sentence_n = len(self.indent_sentences)-1
                     txt = self.get_current_sentence()
@@ -487,7 +487,7 @@ class TextToRead(object):
         # переводим указатель на первое предложение абзаца
         self.current_sentence_n = 0
 
-    def get_current_text(self):
+    def get_current_indent(self):
         """
         Получаем координаты текущего абзаца, возвращаем его текст
         и разбиваем на предложения (пропуская пустые строки)
@@ -523,21 +523,21 @@ class TextToRead(object):
             self.split_to_sentences(txt)
         return txt
 
-    def get_next_text(self):
-        """ Получаем следующие координаты текста """
+    def get_next_indent(self):
+        """ Переход к следующему абзацу """
         txt = False
         while self.textbuffer.get_line_count() > self.indent_num:
             self.indent_num += 1
-            txt = self.get_current_text()
+            txt = self.get_current_indent()
             if txt: break
         return txt
 
-    def get_prev_text(self):
-        """ Получаем предыдущие координаты текста """
+    def get_prev_indent(self):
+        """ Переход к предыдущему абзацу """
         txt = False
         while self.indent_num > 0:
             self.indent_num -= 1
-            txt = self.get_current_text()
+            txt = self.get_current_indent()
             if txt: break
         return txt
 
