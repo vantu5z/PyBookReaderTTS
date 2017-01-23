@@ -65,6 +65,7 @@ class SynthClient(object):
             # сливаем поток, если есть сигнал об этом
             if self.exit_signal: break
 
+            # ожидание окончания преобразования
             while not self.next_data.state:
                 time.sleep(0.1)
                 # прекращаем ожидание преобразования
@@ -186,10 +187,11 @@ class SynthClient(object):
         self.next_data.update_cmd()
 
     def save_rate(self):
+        """ Сохранение скорости чтения """
         self.synth_conf.save_rate()
 
     def set_text_ending(self):
-        """ Завершение чтения, в конце текста """
+        """ Установка метки о завершении текста """
         self.ended = True
 
     def exit(self):
@@ -220,9 +222,8 @@ class PlayAudio(object):
         """ Воспроизведение переданных аудио данных """
         if data:
             self.state = 'read'
-            self.p = subprocess.Popen(
-                            self.play_cmd, 
-                            stdin=subprocess.PIPE)
+            self.p = subprocess.Popen(self.play_cmd, 
+                                      stdin=subprocess.PIPE)
             self.p.communicate(data)
             self.state = 'idle'
 

@@ -483,9 +483,7 @@ class TextToRead(object):
                 i -= 1
             i += 1
 
-        self.indent_sentences = tmp_list
-        # переводим указатель на первое предложение абзаца
-        self.current_sentence_n = 0
+        return tmp_list
 
     def get_current_indent(self):
         """
@@ -520,7 +518,9 @@ class TextToRead(object):
             self.indent_sentences = None
         else:
             # разбиваем текст на предложения
-            self.split_to_sentences(txt)
+            self.indent_sentences = self.split_to_sentences(txt)
+            # переводим указатель на первое предложение абзаца
+            self.current_sentence_n = 0
         return txt
 
     def get_next_indent(self):
