@@ -57,9 +57,9 @@ class PreferencesDialog(Gtk.Window):
         combo_voice = Gtk.ComboBoxText()
         # заполняем комбобокс и устанавливаем текущий голос в нём
         i = 0
-        for voice in self.PBR_Pref.list_of_voices:
+        for voice in self.SD_client.get_voices_list():
             combo_voice.append(str(i), voice)
-            if voice == self.PBR_Pref.current_voice:
+            if voice == self.SD_client.get_current_voice():
                 combo_voice.set_active(i)
             i +=1
         self.page_voice.attach_next_to(combo_voice, label_choose_voice,
@@ -118,7 +118,6 @@ class PreferencesDialog(Gtk.Window):
         combo_text = combo.get_active_text()
         if combo_text != None:
             self.SD_client.set_voice(combo_text)
-            self.PBR_Pref.current_voice = combo_text
 
     def on_check_tool_text_toggled(self, widget):
         """ Включение / отключение подписывания кнопок в панели управления """
