@@ -6,11 +6,12 @@
 и необходимыми потоками для управления чтением
 """
 
-import threading    # для потоков
+import threading    # для организации потоков
 import time         # для задержек
 
-import subprocess
+import subprocess   # для выполнения консольных команд
 
+# модули программы
 # для чтения настроек синтезаторов
 import synth_conf.conf_parse as CP
 
@@ -36,23 +37,27 @@ class SynthClient(object):
         self.aborded = False        # прервано
         self.ended = False          # закончился текст
 
+        # плеер для воспроизведения аудио
         self.player = PlayAudio()
 
+        # генератор команды для синтеза речи
         self.s_cmd = SynthCMD(self.synth_conf)
 
+        # преобразователи текста в аудио
+        # текущий - из него берутся данные для чтения
         self.curent_data = TextToAudio(self.s_cmd)
         self.curent_data.start()
-        
+
+        # следующий - пока идёт чтение в другом потоке подготавливаются данные
         self.next_data = TextToAudio(self.s_cmd)
         self.next_data.start()
 
     def play(self):
         """
         Запускается в отдельном потоке для воспроизведения.
-        Для завершения потока, нужно установить события
-        exit_signal и say
+        Завершение потока производится через self.exit()
         """
-        while True: 
+        while True:
             # ловим событие о разрешении чтения
             self.say.wait()
             self.say.clear()
@@ -65,13 +70,13 @@ class SynthClient(object):
                 # прекращаем ожидание преобразования
                 # из-за остановки или конца текста
                 if self.aborded or self.ended: break
-                
+
             self.curent_data.data = self.next_data.data
             self.curent_data.state = True
 
             txt = None
             cur_sent_n = None
-            
+
             if self.ended == False and self.aborded == False:
                 txt = self.win.TTR.get_current_sentence()
                 # Отмечаем текст, который читаем, если он есть
@@ -79,7 +84,7 @@ class SynthClient(object):
                     cur_sent_n = self.win.TTR.current_sentence_n
                     start, end = self.win.TTR.get_sentence_pos(cur_sent_n)
                     self.win.mark_readtext(start, end)
-                    
+
                     self.next_data.get(self.win.TTR.get_next_sentence())
             else:
                 self.playing = False
@@ -102,7 +107,7 @@ class SynthClient(object):
                     self.player.play(self.curent_data.data)
                     # продолжаем чтение, если небыло остановок
                     if self.playing: self.say_allow()
-                else: 
+                else:
                     if self.playing: self.say_allow()
 
     def say_allow(self):
@@ -193,10 +198,10 @@ class SynthClient(object):
         self.exit_signal = True
         self.say_allow()
         self.thread_play.join(1)
-        
+
         self.curent_data.exit()
         self.curent_data.join(1)
-        
+
         self.next_data.exit()
         self.next_data.join(1)
 
@@ -210,7 +215,7 @@ class PlayAudio(object):
         self.play_cmd = ['aplay', '-q']
         # статус (свободен - idle, чтение - read)
         self.state = 'idle'
-        
+
     def play(self, data):
         """ Воспроизведение переданных аудио данных """
         if data:
@@ -220,7 +225,7 @@ class PlayAudio(object):
                             stdin=subprocess.PIPE)
             self.p.communicate(data)
             self.state = 'idle'
-        
+
     def stop(self):
         """ Остановка процесса, если он существует """
         if self.state == 'read':
@@ -250,30 +255,31 @@ class TextToAudio(threading.Thread):
         # флаги управления
         self.aborded = False
         self.exit_signal = False
-        
+
     def run(self):
         """ Ожидание события с запросом на преобразование """
         while True:
             self.get_value.wait()
             self.get_value.clear()
-            
+
             # завершаем поток для выхода из программы
             if self.exit_signal: break
-            
+
             self.aborded = False
             self.state = False
             if self.text:
                 self.data = self.txt2audio(self.text)
                 if not self.aborded:
                     self.state = True
-    
+
     def get(self, text):
         """ Запрос на преобразование """
         # сначала остановим незаконченное преобразование
         if not self.state: self.abord()
         self.text = text
+        # разрешаем преобразование
         self.get_value.set()
-    
+
     def abord(self):
         """ Остановка преобразования """
         try:
@@ -281,7 +287,7 @@ class TextToAudio(threading.Thread):
             self.aborded = True
         except:
             pass
-    
+
     def txt2audio(self, text):
         """ Перевод текста в аудио данные """
         self.p = subprocess.Popen(self.synth_cmd, 
@@ -310,7 +316,7 @@ class SynthCMD(object):
         self.synth_cmd = []
         # собираем команду
         self.generate()
-        
+
     def generate(self):
         """ составление команды с параметрами """
         self.synth_cmd = []
