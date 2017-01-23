@@ -19,7 +19,7 @@ import preferences_dialog as PD
 import search_dialog as SD
 import synth_client as SC
 
-class TextViewWindow(Gtk.Window):
+class MainWindow(Gtk.Window):
     """
     Основное окно программы
     """
@@ -553,7 +553,7 @@ def exit_app(self, widget):
 
 def main():
     """ Старт программы """
-    win = TextViewWindow()
+    win = MainWindow()
     win.connect("delete-event", exit_app)
     win.show_all()
     Gtk.main()

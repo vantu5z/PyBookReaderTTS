@@ -3,5 +3,5 @@
 
 """ Запуск программы """
 
-import br_gui as app
+import main_window as app
 app.main()
