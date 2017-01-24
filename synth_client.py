@@ -20,9 +20,10 @@ class SynthClient(object):
     Клиент для работы с синтезатором
     """
     def __init__(self, win):
-        self.win = win  # для связи с GUI классом
+        self.win = win  # для связи с главным окном программы
 
-        self.synth_conf = CP.SynthConfParser('synth_conf/rhvoice.conf')
+        self.synth_conf = CP.SynthConfParser('synth_conf/' +
+                            self.win.PBR_Pref.get_synth_filename(self.win.PBR_Pref.current_synth))
 
         # создаём событие по которому разрешается чтение
         # и поток для управления чтением
@@ -65,9 +66,12 @@ class SynthClient(object):
             # сливаем поток, если есть сигнал об этом
             if self.exit_signal: break
 
+            self.aborded = False
+            self.stoped = False
+
             # ожидание окончания преобразования
             while not self.next_data.state:
-                time.sleep(0.1)
+                time.sleep(0.001)
                 # прекращаем ожидание преобразования
                 # из-за остановки или конца текста
                 if self.aborded or self.ended: break
@@ -118,8 +122,6 @@ class SynthClient(object):
     def start_play(self):
         """ Начало воспроизведения """
         self.playing = True
-        self.aborded = False
-        self.stoped = False
         self.ended = False
         self.next_data.get(self.win.TTR.get_current_sentence())
         self.say_allow()
@@ -129,11 +131,10 @@ class SynthClient(object):
         self.playing = False
         self.aborded = True
         self.stoped = False
+        # останавливаем чтение
         # возвращаем указатель на предыдущее предложение,
-        # если при остановке шло чтение
-        if self.player.state == "read":
-            self.player.stop()
-            self.win.TTR.get_prev_sentence()
+        self.player.stop()
+        self.win.TTR.get_prev_sentence()
 
     def stop(self):
         """ Остановка чтения с возможностью восстановления"""
@@ -193,6 +194,13 @@ class SynthClient(object):
     def set_text_ending(self):
         """ Установка метки о завершении текста """
         self.ended = True
+
+    def change_synth_conf(self, synth):
+        """ Переключение на другой синтезатор """
+        self.synth_conf = CP.SynthConfParser('synth_conf/' + synth)
+        # обновляем команды в преобразователях
+        self.curent_data.update_cmd()
+        self.next_data.update_cmd()
 
     def exit(self):
         """ Завершение потоков клиента для выхода из программы """
@@ -292,9 +300,9 @@ class TextToAudio(threading.Thread):
     def txt2audio(self, text):
         """ Перевод текста в аудио данные """
         self.p = subprocess.Popen(self.synth_cmd, 
-                             stdin = subprocess.PIPE,
-                             stdout = subprocess.PIPE,
-                             stderr = subprocess.PIPE)
+                                  stdin = subprocess.PIPE,
+                                  stdout = subprocess.PIPE,
+                                  stderr = subprocess.PIPE)
         stdout, stderr = self.p.communicate(text.encode('utf-8'))
         return stdout
 

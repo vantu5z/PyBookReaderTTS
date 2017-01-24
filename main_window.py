@@ -35,11 +35,11 @@ class MainWindow(Gtk.Window):
         # флаг занятости при переходе между абзацами
         self.progress = False
 
+        # установка настроек
+        self.PBR_Pref = PD.Preferences()
+
         # клиент для чтения
         self.synth_client = SC.SynthClient(self)
-
-        # установка настроек
-        self.PBR_Pref = PD.Preferences(self.synth_client)
 
         # создание группы для горячих клавиш
         self.accel_group = Gtk.AccelGroup()

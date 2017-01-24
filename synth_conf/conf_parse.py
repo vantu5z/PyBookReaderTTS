@@ -20,6 +20,8 @@ class SynthConfParser():
 
     def parse(self):
         """ Чтение настроек из файла """
+        # название синтезатора
+        self.name = self.s_opt.get('name')
         # основная команда синтезатора
         self.synth_cmd = self.s_opt.get('synth_cmd')
         # скорость чтения
@@ -32,6 +34,9 @@ class SynthConfParser():
         # текущий голос
         self.current_voice = self.s_opt.get('current_voice')
         self.set_voice = self.s_opt.get('set_voice')
+
+    def get_name(self):
+        return self.name
 
     def save_curret_voice(self):
         """ Сохранение настроек текущего голоса в файл """
