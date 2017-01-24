@@ -59,11 +59,14 @@ class SynthClient(object):
         Завершение потока производится через self.exit()
         """
         while True:
+          # завершаем поток, если есть сигнал об этом
+          if self.exit_signal: break  
+          while True:
             # ловим событие о разрешении чтения
             self.say.wait()
             self.say.clear()
 
-            # сливаем поток, если есть сигнал об этом
+            # завершаем поток, если есть сигнал об этом
             if self.exit_signal: break
 
             self.aborded = False
@@ -75,6 +78,8 @@ class SynthClient(object):
                 # прекращаем ожидание преобразования
                 # из-за остановки или конца текста
                 if self.aborded or self.ended: break
+
+            if self.aborded or self.ended: break
 
             self.curent_data.data = self.next_data.data
             self.curent_data.state = True
@@ -106,6 +111,8 @@ class SynthClient(object):
                     if not self.playing: break   # выходим из задержки по указанию
                     delay -= 0.001
 
+            if not self.playing: break
+
             # читаем текущий текст, если не было команд на остановку
             if not (self.aborded or self.stoped):
                 if (txt != None) and (self.curent_data.data != None):
@@ -132,9 +139,10 @@ class SynthClient(object):
         self.aborded = True
         self.stoped = False
         # останавливаем чтение
-        # возвращаем указатель на предыдущее предложение,
-        self.player.stop()
-        self.win.TTR.get_prev_sentence()
+        # возвращаем указатель на предыдущее предложение
+        if self.player.state == 'read':
+            self.player.stop()
+            self.win.TTR.get_prev_sentence()
 
     def stop(self):
         """ Остановка чтения с возможностью восстановления"""
