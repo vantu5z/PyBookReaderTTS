@@ -118,7 +118,7 @@ class SynthClient(object):
                 if (txt != None) and (self.curent_data.data != None):
                     self.player.play(self.curent_data.data)
                     # продолжаем чтение, если небыло остановок
-                    if self.playing: self.say_allow()
+                    if not (self.aborded or self.stoped): self.say_allow()
                 else:
                     if self.playing: self.say_allow()
 
