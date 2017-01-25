@@ -66,13 +66,17 @@ class PreferencesDialog(Gtk.Window):
                                        Gtk.PositionType.RIGHT, 1, 1)
         combo_synth.connect("changed", self.on_combo_synth_changed)
 
-        self.note = Gtk.Label('Примечание: ' + self.SD_client.get_synth_note())
+        self.note = Gtk.Label()
         self.page_voice.attach_next_to(self.note, label_choose_synth,
-                                       Gtk.PositionType.BOTTOM, 1, 1)
+                                       Gtk.PositionType.BOTTOM, 2, 1)
+        self.update_note()
 
         separator = Gtk.Separator.new(0)
         self.page_voice.attach_next_to(separator, self.note,
                                        Gtk.PositionType.BOTTOM, 2, 1)
+        # добавим отступы
+        separator.props.margin_top = 5
+        separator.props.margin_bottom = 10
 
         label_voice_pref = Gtk.Label('Настройка параметров чтения:')
         self.page_voice.attach_next_to(label_voice_pref, separator,
