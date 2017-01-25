@@ -169,7 +169,7 @@ class SynthClient(object):
     def set_voice(self, voice):
         """ Установка голоса """
         self.synth_conf.current_voice = voice
-        self.s_cmd.generate()
+        self.s_cmd.generate(self.synth_conf)
         # обновляем команды в преобразователях
         self.curent_data.update_cmd()
         self.next_data.update_cmd()
@@ -186,12 +186,13 @@ class SynthClient(object):
     def get_rate(self):
         """ Получение значение скорости чтения """
         rate = self.synth_conf.speech_rate
-        return int(rate)
+        if rate != None: int(rate)
+        return rate
 
     def set_rate(self, rate):
         """ Установка скорости чтения и сохранение значения """
         self.synth_conf.speech_rate = rate
-        self.s_cmd.generate()
+        self.s_cmd.generate(self.synth_conf)
         self.curent_data.update_cmd()
         self.next_data.update_cmd()
 
@@ -329,22 +330,24 @@ class SynthCMD(object):
     Команда для перевода текста в аудио данные
     """
     def __init__(self, synth_conf):
-        self.synth_conf = synth_conf
         self.synth_cmd = []
         # собираем команду
-        self.generate()
+        self.generate(synth_conf)
 
-    def generate(self):
+    def generate(self, synth_conf):
         """ составление команды с параметрами """
         self.synth_cmd = []
-        self.synth_cmd.append(self.synth_conf.synth_cmd)
+        self.synth_cmd.append(synth_conf.synth_cmd)
+
         # голос
-        self.synth_cmd.append(self.synth_conf.set_voice)
-        self.synth_cmd.append(self.synth_conf.current_voice)
+        self.synth_cmd.append(synth_conf.set_voice)
+        self.synth_cmd.append(synth_conf.current_voice)
+
         # скорость чтения
-        self.synth_cmd.append(self.synth_conf.set_rate)
-        self.synth_cmd.append(str(self.synth_conf.speech_rate/100))
+        if synth_conf.set_rate != None:
+            self.synth_cmd.append(synth_conf.set_rate)
+            self.synth_cmd.append(str(synth_conf.speech_rate/100))
 
     def get(self):
-        """ Возвращает собранную команду """
+        """ Возвращает собранную команду внешнему потребителю """
         return self.synth_cmd

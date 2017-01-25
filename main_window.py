@@ -220,7 +220,10 @@ class MainWindow(Gtk.Window):
         # ползунок для настройки скорости чтения
         speech_rate = Gtk.HScale.new_with_range(-100, 100, 1)
         # начальное значение
-        speech_rate.set_value(self.synth_client.get_rate())
+        if self.synth_client.get_rate() != None:
+            speech_rate.set_value(self.synth_client.get_rate())
+        else:
+            speech_rate.set_value(0)
         speech_rate.set_hexpand(True)
         speech_rate.set_tooltip_markup('Скорость чтения от -100 до 100')
         speech_rate.connect("value-changed", self.speech_rate_changed)
@@ -314,7 +317,8 @@ class MainWindow(Gtk.Window):
         rate = widget.get_value()
         if rate != None:
             rate = int(rate)
-            self.synth_client.set_rate(rate)
+            if  self.synth_client.get_rate() != None:
+                self.synth_client.set_rate(rate)
 
     def on_preferences_clicked(self, widget):
         """ Вызов диалога настройки """

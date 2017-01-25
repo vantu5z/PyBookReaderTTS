@@ -22,20 +22,29 @@ class SynthConfParser():
         """ Чтение настроек из файла """
         # название синтезатора
         self.name = self.s_opt.get('name')
+
         # основная команда синтезатора
         self.synth_cmd = self.s_opt.get('synth_cmd')
+
         # скорость чтения
-        self.set_rate = self.s_opt.get('set_rate')
-        self.speech_rate = self.s_opt.getint('speech_rate')
+        try:
+            self.set_rate = self.s_opt.get('set_rate')
+            self.speech_rate = self.s_opt.getint('speech_rate')
+        except:
+            self.set_rate = None
+            self.speech_rate = None
+
         # список доступных голосов
         self.voices_list = []
         for option in self.config['Voices']:
             self.voices_list.append(self.voices.get(option))
+
         # текущий голос
         self.current_voice = self.s_opt.get('current_voice')
         self.set_voice = self.s_opt.get('set_voice')
 
     def get_name(self):
+        """ Передача имени внешнему потребителю """
         return self.name
 
     def save_curret_voice(self):
@@ -46,6 +55,7 @@ class SynthConfParser():
 
     def save_rate(self):
         """ Установка скорости чтения и сохранение значения """
-        self.config['Synth Options']['speech_rate'] = str(self.speech_rate)
-        with open(self.conf_file, 'w') as configfile:
-            self.config.write(configfile)
+        if self.speech_rate != None:
+            self.config['Synth Options']['speech_rate'] = str(self.speech_rate)
+            with open(self.conf_file, 'w') as configfile:
+                self.config.write(configfile)
