@@ -145,14 +145,11 @@ class PreferencesDialog(Gtk.Window):
 
     def on_check_tool_text_toggled(self, widget):
         """ Включение / отключение подписывания кнопок в панели управления """
-        # получаем ссылку на панель управления
-        toolbar = self.main_win.grid.get_child_at(0,1)
-        # включаем или отключаем текст у значков
-        if widget.get_active() == True and toolbar != None:
-            toolbar.set_style(2)
+        if widget.get_active() == True and self.main_win.toolbar != None:
+            self.main_win.toolbar.set_style(2)
             self.PBR_Pref.labels_for_toolbuttons = True
         else:
-            toolbar.set_style(0)
+            self.main_win.toolbar.set_style(0)
             self.PBR_Pref.labels_for_toolbuttons = False
 
     def on_spin_indent_delay_changed(self, widget):

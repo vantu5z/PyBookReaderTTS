@@ -127,33 +127,33 @@ class MainWindow(Gtk.Window):
 
     def create_toolbar(self):
         """Создание панели иструментов с кнопками управления"""
-        toolbar = Gtk.Toolbar()
+        self.toolbar = Gtk.Toolbar()
         # устанавливаем начальный стиль для кнопок (с текстом или без)
         if self.PBR_Pref.labels_for_toolbuttons:
-            toolbar.set_style(2)
+            self.toolbar.set_style(2)
         else:
-            toolbar.set_style(0)
-        self.grid.attach(toolbar, 0, 1, 3, 1)
+            self.toolbar.set_style(0)
+        self.grid.attach(self.toolbar, 0, 1, 3, 1)
 
         button_prev = Gtk.ToolButton()
         button_prev.set_label('Назад')
         button_prev.set_icon_name("stock_media-prev")
-        toolbar.insert(button_prev, 0)
+        self.toolbar.insert(button_prev, 0)
 
         button_stop = Gtk.ToolButton()
         button_stop.set_label('Стоп')
         button_stop.set_icon_name("media-playback-stop")
-        toolbar.insert(button_stop, 1)
+        self.toolbar.insert(button_stop, 1)
 
         button_play = Gtk.ToolButton()
         button_play.set_label('Читать')
         button_play.set_icon_name("media-playback-start")
-        toolbar.insert(button_play, 2)
+        self.toolbar.insert(button_play, 2)
 
         button_next = Gtk.ToolButton()
         button_next.set_label('Вперёд')
         button_next.set_icon_name("stock_media-next")
-        toolbar.insert(button_next, 3)
+        self.toolbar.insert(button_next, 3)
 
         # подключаем события к кнопкам
         button_prev.connect("clicked", self.on_prev_button_clicked)
@@ -161,21 +161,21 @@ class MainWindow(Gtk.Window):
         button_play.connect("clicked", self.on_play_button_clicked)
         button_next.connect("clicked", self.on_next_button_clicked)
 
-        toolbar.insert(Gtk.SeparatorToolItem(), 4)
+        self.toolbar.insert(Gtk.SeparatorToolItem(), 4)
 
         button_search = Gtk.ToolButton()
         button_search.set_label('Поиск')
         button_search.set_icon_name("system-search")
         button_search.connect("clicked", self.on_search_clicked)
-        toolbar.insert(button_search, 5)
+        self.toolbar.insert(button_search, 5)
 
-        toolbar.insert(Gtk.SeparatorToolItem(), 6)
+        self.toolbar.insert(Gtk.SeparatorToolItem(), 6)
 
         button_preferences = Gtk.ToolButton()
         button_preferences.set_label('Настройки')
         button_preferences.set_icon_name("preferences-system")
         button_preferences.connect("clicked", self.on_preferences_clicked)
-        toolbar.insert(button_preferences, 7)
+        self.toolbar.insert(button_preferences, 7)
 
     def create_textview(self):
         """Создание текстового окна с прокруткой"""
