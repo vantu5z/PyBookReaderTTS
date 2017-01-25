@@ -196,6 +196,12 @@ class SynthClient(object):
         self.curent_data.update_cmd()
         self.next_data.update_cmd()
 
+    def get_synth_note(self):
+        """ Получение примечания по синтезатору """
+        note = self.synth_conf.note
+        if note == None: note = ''
+        return note
+
     def save_rate(self):
         """ Сохранение скорости чтения """
         self.synth_conf.save_rate()
@@ -330,13 +336,15 @@ class SynthCMD(object):
     Команда для перевода текста в аудио данные
     """
     def __init__(self, synth_conf):
-        self.synth_cmd = []
+        self.synth_cmd = None
         # собираем команду
         self.generate(synth_conf)
 
     def generate(self, synth_conf):
-        """ составление команды с параметрами """
+        """ Составление команды с параметрами """
         self.synth_cmd = []
+
+        # основная команда синтезатора
         self.synth_cmd.append(synth_conf.synth_cmd)
 
         # голос

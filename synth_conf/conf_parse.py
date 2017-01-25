@@ -43,6 +43,12 @@ class SynthConfParser():
         self.current_voice = self.s_opt.get('current_voice')
         self.set_voice = self.s_opt.get('set_voice')
 
+        # дополнительная информация
+        try:
+            self.note = self.s_opt.get('note')
+        except:
+            self.note = ''
+
     def get_name(self):
         """ Передача имени внешнему потребителю """
         return self.name

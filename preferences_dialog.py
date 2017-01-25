@@ -66,8 +66,16 @@ class PreferencesDialog(Gtk.Window):
                                        Gtk.PositionType.RIGHT, 1, 1)
         combo_synth.connect("changed", self.on_combo_synth_changed)
 
+        self.note = Gtk.Label('Примечание: ' + self.SD_client.get_synth_note())
+        self.page_voice.attach_next_to(self.note, label_choose_synth,
+                                       Gtk.PositionType.BOTTOM, 1, 1)
+
+        separator = Gtk.Separator.new(0)
+        self.page_voice.attach_next_to(separator, self.note,
+                                       Gtk.PositionType.BOTTOM, 2, 1)
+
         label_voice_pref = Gtk.Label('Настройка параметров чтения:')
-        self.page_voice.attach_next_to(label_voice_pref, label_choose_synth,
+        self.page_voice.attach_next_to(label_voice_pref, separator,
                                        Gtk.PositionType.BOTTOM, 1, 1)
 
         label_choose_voice = Gtk.Label('Голос для чтения:')
@@ -121,17 +129,13 @@ class PreferencesDialog(Gtk.Window):
 
         self.show_all()
 
-    def exit_pref_win(self, data=None):
-        """ Выход из диалога """
-        # сохраняем настройки и выходим
-        self.PBR_Pref.save_settings()
-        self.destroy()
-
     def on_combo_synth_changed(self, combo):
         """ Переключение синтезатора """
         self.SD_client.change_synth_conf(
                     self.PBR_Pref.get_synth_filename(combo.get_active_text()))
+        self.PBR_Pref.current_synth = combo.get_active_text()
         self.upd_voices_combo()
+        self.update_note()
 
     def on_combo_voice_changed(self, combo):
         """ Изменение голоса """
@@ -168,6 +172,20 @@ class PreferencesDialog(Gtk.Window):
             if voice == self.SD_client.get_current_voice():
                 self.combo_voice.set_active(i)
             i +=1
+
+    def update_note(self):
+        """ Обновление примечания """
+        if self.SD_client.get_synth_note() != '':
+            self.note.set_text("Примечание: " + self.SD_client.get_synth_note())
+            self.note.show()
+        else:
+            self.note.hide()
+
+    def exit_pref_win(self, data=None):
+        """ Выход из диалога настроек """
+        # сохраняем настройки и выходим
+        self.PBR_Pref.save_settings()
+        self.destroy()
 
 class Preferences(object):
     """
