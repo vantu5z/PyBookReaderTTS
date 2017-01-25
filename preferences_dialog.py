@@ -15,7 +15,7 @@ import subprocess   # для проверки наличия синтезато�
 
 # модули программы
 # для чтения настроек синтезаторов
-import synth_conf.conf_parse as CP
+import synth_conf.parser as SCP
 # диалог выбора синтезатора
 import select_synth_dialog as SSD
 
@@ -268,7 +268,7 @@ class Preferences(object):
         list_of_synth_files = filter(lambda x: x.endswith('.conf'), files)
         list_of_synth = []
         for synth_file in list_of_synth_files:
-            synth_conf = CP.SynthConfParser('synth_conf/' + synth_file)
+            synth_conf = SCP.SynthConfParser('synth_conf/' + synth_file)
             # проверка на наличие синтезатора в системе
             p = subprocess.Popen(["whereis", synth_conf.synth_cmd],
                                  stdout=subprocess.PIPE)

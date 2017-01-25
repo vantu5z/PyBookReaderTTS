@@ -13,7 +13,7 @@ import subprocess   # для выполнения консольных кома�
 
 # модули программы
 # для чтения настроек синтезаторов
-import synth_conf.conf_parse as CP
+import synth_conf.parser as SCP
 
 class SynthClient(object):
     """
@@ -22,7 +22,7 @@ class SynthClient(object):
     def __init__(self, win):
         self.win = win  # для связи с главным окном программы
 
-        self.synth_conf = CP.SynthConfParser('synth_conf/' +
+        self.synth_conf = SCP.SynthConfParser('synth_conf/' +
                             self.win.PBR_Pref.get_synth_filename(self.win.PBR_Pref.current_synth))
 
         # создаём событие по которому разрешается чтение
@@ -130,6 +130,7 @@ class SynthClient(object):
         """ Начало воспроизведения """
         self.playing = True
         self.ended = False
+        self.next_data.abord()
         self.next_data.get(self.win.TTR.get_current_sentence())
         self.say_allow()
 
@@ -212,7 +213,7 @@ class SynthClient(object):
 
     def change_synth_conf(self, synth):
         """ Переключение на другой синтезатор """
-        self.synth_conf = CP.SynthConfParser('synth_conf/' + synth)
+        self.synth_conf = SCP.SynthConfParser('synth_conf/' + synth)
         # обновляем команды в преобразователях
         self.curent_data.update_cmd()
         self.next_data.update_cmd()
@@ -309,6 +310,7 @@ class TextToAudio(threading.Thread):
         try:
             self.p.kill()
             self.aborded = True
+            self.state = False
         except:
             pass
 
