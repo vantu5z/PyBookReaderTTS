@@ -72,6 +72,8 @@ class SynthClient(object):
             self.aborded = False
             self.stoped = False
 
+            # небольшая задержка для устранения рассинхрона потоков
+            time.sleep(0.005)
             # ожидание окончания преобразования
             while not self.next_data.state:
                 time.sleep(0.001)
@@ -130,7 +132,6 @@ class SynthClient(object):
         """ Начало воспроизведения """
         self.playing = True
         self.ended = False
-        self.next_data.abord()
         self.next_data.get(self.win.TTR.get_current_sentence())
         self.say_allow()
 
@@ -301,6 +302,7 @@ class TextToAudio(threading.Thread):
         """ Запрос на преобразование """
         # сначала остановим незаконченное преобразование
         if not self.state: self.abord()
+        else: self.state = False
         self.text = text
         # разрешаем преобразование
         self.get_value.set()
