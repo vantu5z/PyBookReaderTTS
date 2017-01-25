@@ -23,7 +23,7 @@ class MainWindow(Gtk.Window):
     """
     Основное окно программы
     """
-    def __init__(self):
+    def __init__(self, PBR_Pref):
         Gtk.Window.__init__(self, title="PyBookReaderTTS")
 
         self.set_default_size(600, 400)
@@ -36,7 +36,7 @@ class MainWindow(Gtk.Window):
         self.progress = False
 
         # установка настроек
-        self.PBR_Pref = PD.Preferences()
+        self.PBR_Pref = PBR_Pref
 
         # клиент для чтения
         self.synth_client = SC.SynthClient(self)
@@ -550,17 +550,25 @@ def exit_app(self, widget):
     Выход из программы с сохранением настроек,
     остановкой чтения и завершением всех запущенных потоков
     """
-    self.synth_client.save_rate()
-    self.PBR_Pref.save_settings()
-    self.synth_client.exit()
+    try:
+        self.synth_client.save_rate()
+        self.PBR_Pref.save_settings()
+        self.synth_client.exit()
+    except:
+        pass
     Gtk.main_quit()
 
 def main():
     """ Старт программы """
-    win = MainWindow()
-    win.connect("delete-event", exit_app)
-    win.show_all()
-    Gtk.main()
+    # чтение и установка настроек
+    PBR_Pref = PD.Preferences()
+
+    if PBR_Pref.current_synth != None:
+        win = MainWindow(PBR_Pref)
+        win.connect("delete-event", exit_app)
+
+        win.show_all()
+        Gtk.main()
 
 if __name__ == '__main__':
     main()

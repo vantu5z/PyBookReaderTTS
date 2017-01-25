@@ -15,6 +15,8 @@ import os
 # модули программы
 # для чтения настроек синтезаторов
 import synth_conf.conf_parse as CP
+# диалог выбора синтезатора
+import select_synth_dialog as SSD
 
 class PreferencesDialog(Gtk.Window):
     """
@@ -211,6 +213,10 @@ class Preferences(object):
         self.list_of_synth = self.get_list_of_synth()
         # текущий синтезатор
         self.current_synth = self.get_current_synth()
+        
+        # если ещё не выбран синтезатор, просим его выбрать
+        if self.current_synth == None:
+            self.current_synth = self.select_synth()
 
     def set_default_conf(self):
         """ Установка настроек по умолчанию """
@@ -247,8 +253,10 @@ class Preferences(object):
 
     def get_current_synth(self):
         """ Получаем текущий синтезатор из conf файла"""
-        synth = self.settings.get('current_synth')
-        # TODO: если ещё не выбран синтезатор, предложить выбор
+        try:
+            synth = self.settings.get('current_synth')
+        except:
+            synth = None
         return synth
 
     def get_list_of_synth(self):
@@ -268,3 +276,15 @@ class Preferences(object):
             if synth_name == synth_record[1]:
                 return synth_record[0]
         return False
+
+    def select_synth(self):
+        """ Выбор синтезатора """
+        dialog = SSD.SelectSynthDialog(self)
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            synth = dialog.get_synth()
+            dialog.destroy()
+            return synth
+        else:
+            dialog.destroy()
+            return None
