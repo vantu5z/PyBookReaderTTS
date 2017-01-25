@@ -256,6 +256,7 @@ class Preferences(object):
         """ Получаем текущий синтезатор из conf файла"""
         try:
             synth = self.settings.get('current_synth')
+            if synth == '': synth = None
         except:
             synth = None
         return synth
