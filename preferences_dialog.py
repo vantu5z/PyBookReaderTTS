@@ -11,6 +11,7 @@ from gi.repository import Gtk
 
 import configparser
 import os
+import subprocess   # для проверки наличия синтезаторов
 
 # модули программы
 # для чтения настроек синтезаторов
@@ -260,14 +261,20 @@ class Preferences(object):
         return synth
 
     def get_list_of_synth(self):
-        """ Создание списка доступных файлов конфигурации для синтезаторов """
+        """ Создание списка доступных синтезаторов """
         files = os.listdir('synth_conf')
         # фильтруем по расширению ".conf"
         list_of_synth_files = filter(lambda x: x.endswith('.conf'), files)
         list_of_synth = []
         for synth_file in list_of_synth_files:
             synth_conf = CP.SynthConfParser('synth_conf/' + synth_file)
-            list_of_synth.append([synth_file, synth_conf.get_name()])
+            # проверка на наличие синтезатора в системе
+            p = subprocess.Popen(["whereis", synth_conf.synth_cmd],
+                                 stdout=subprocess.PIPE)
+            stdout = p.communicate()
+            if stdout[0] != (synth_conf.synth_cmd+':\n').encode('utf-8'):
+                list_of_synth.append([synth_file, synth_conf.get_name()])
+
         return list_of_synth
 
     def get_synth_filename(self, synth_name):
