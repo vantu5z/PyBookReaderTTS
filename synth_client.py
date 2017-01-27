@@ -156,7 +156,9 @@ class SynthClient(object):
             self.win.TTR.get_prev_sentence()
         # сбрасываем данные следующего текста на текущий
         # для возобновления чтения
+        self.next_data.abord()
         self.next_data.data = self.curent_data.data
+        self.next_data.state = True
 
     def resume(self):
         """ Продолжение чтения с начала предложения """
