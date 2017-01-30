@@ -169,16 +169,19 @@ class PreferencesDialog(Gtk.Window):
 
     def upd_voices_combo(self):
         """ Заполнение выпадающего меню голосами """
-        i = 0
-        self.combo_voice.remove_all()
-        for voice in self.SD_client.get_voices_list():
-            self.combo_voice.append(str(i), voice)
-            if voice == self.SD_client.get_current_voice():
-                self.combo_voice.set_active(i)
-            i +=1
+        if self.SD_client.get_voices_list() != None:
+            i = 0
+            self.combo_voice.remove_all()
+            for voice in self.SD_client.get_voices_list():
+                self.combo_voice.append(str(i), voice)
+                if voice == self.SD_client.get_current_voice():
+                    self.combo_voice.set_active(i)
+                i +=1
+        else:
+            self.combo_voice.remove_all()
 
     def update_note(self):
-        """ Обновление примечания """
+        """ Обновление текста примечания """
         if self.SD_client.get_synth_note() != '':
             self.note.set_text("Примечание: " + self.SD_client.get_synth_note())
             self.note.show()
@@ -214,7 +217,7 @@ class Preferences(object):
         self.list_of_synth = self.get_list_of_synth()
         # текущий синтезатор
         self.current_synth = self.get_current_synth()
-        
+
         # если ещё не выбран синтезатор, просим его выбрать
         if self.current_synth == None:
             self.current_synth = self.select_synth()

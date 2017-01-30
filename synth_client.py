@@ -39,18 +39,18 @@ class SynthClient(object):
         self.ended = False          # закончился текст
 
         # плеер для воспроизведения аудио
-        self.player = PlayAudio()
+        self.player = PlayAudio(self.synth_conf)
 
         # генератор команды для синтеза речи
         self.s_cmd = SynthCMD(self.synth_conf)
 
         # преобразователи текста в аудио
         # текущий - из него берутся данные для чтения
-        self.curent_data = TextToAudio(self.s_cmd)
+        self.curent_data = TextToAudio(self.s_cmd, self.synth_conf)
         self.curent_data.start()
 
         # следующий - пока идёт чтение в другом потоке подготавливаются данные
-        self.next_data = TextToAudio(self.s_cmd)
+        self.next_data = TextToAudio(self.s_cmd, self.synth_conf)
         self.next_data.start()
 
     def play(self):
@@ -216,10 +216,11 @@ class SynthClient(object):
 
     def change_synth_conf(self, synth):
         """ Переключение на другой синтезатор """
-        self.synth_conf = SCP.SynthConfParser('synth_conf/' + synth)
+        self.synth_conf.change_conf_file('synth_conf/' + synth)
         # обновляем команды в преобразователях
         self.curent_data.update_cmd()
         self.next_data.update_cmd()
+        self.player.update_cmd()
 
     def exit(self):
         """ Завершение потоков клиента для выхода из программы """
@@ -237,11 +238,11 @@ class SynthClient(object):
 class PlayAudio(object):
     """
     Воспроизведение переданных аудио данных
-    TODO: команда для воспроизведения из файла конфигурации, пока используется "aplay"
     """
-    def __init__(self):
+    def __init__(self, synth_conf):
+        self.synth_conf = synth_conf
         # команда для воспроизведения
-        self.play_cmd = ['aplay', '-q']
+        self.play_cmd = self.synth_conf.get_play_cmd()
         # статус (свободен - idle, чтение - read)
         self.state = 'idle'
 
@@ -262,18 +263,26 @@ class PlayAudio(object):
                 self.state = 'idle'
             except:
                 pass
+    def update_cmd(self):
+        """ Обновление команды плеера
+            (требуется при изменения синтезатора) """
+        self.stop()
+        self.play_cmd = self.synth_conf.get_play_cmd()
 
 class TextToAudio(threading.Thread):
     """
     Перевод текста в аудио данные с помощью синтезатора
     Действия производятся в отдельном потоке
     """
-    def __init__(self, s_cmd):
+    def __init__(self, s_cmd, synth_conf):
         threading.Thread.__init__(self)
         self.get_value = threading.Event()
         self.s_cmd = s_cmd
+        self.synth_conf = synth_conf
         # команда для синтезатора
         self.synth_cmd = self.s_cmd.get()
+        # кодировка текста
+        self.text_coding = self.synth_conf.get_text_coding()
         # состояние
         self.state = True
         # аудио данные
@@ -324,13 +333,16 @@ class TextToAudio(threading.Thread):
                                   stdin = subprocess.PIPE,
                                   stdout = subprocess.PIPE,
                                   stderr = subprocess.PIPE)
-        stdout, stderr = self.p.communicate(text.encode('utf-8'))
+        stdout, stderr = self.p.communicate(text.encode(self.text_coding))
         return stdout
 
     def update_cmd(self):
         """ Обновление команды синтезатора 
             (требуется для изменения голоса и других параметров) """
+        self.abord()
+        self.s_cmd.generate(self.synth_conf)
         self.synth_cmd = self.s_cmd.get()
+        self.text_coding = self.synth_conf.get_text_coding()
 
     def exit(self):
         """ Завершение потока для выхода из программы """
@@ -339,7 +351,7 @@ class TextToAudio(threading.Thread):
 
 class SynthCMD(object):
     """
-    Команда для перевода текста в аудио данные
+    Генератор команды для перевода текста в аудио данные
     """
     def __init__(self, synth_conf):
         self.synth_cmd = None
@@ -354,8 +366,9 @@ class SynthCMD(object):
         self.synth_cmd.append(synth_conf.synth_cmd)
 
         # голос
-        self.synth_cmd.append(synth_conf.set_voice)
-        self.synth_cmd.append(synth_conf.current_voice)
+        if synth_conf.set_voice != None:
+            self.synth_cmd.append(synth_conf.set_voice)
+            self.synth_cmd.append(synth_conf.current_voice)
 
         # скорость чтения
         if synth_conf.set_rate != None:
