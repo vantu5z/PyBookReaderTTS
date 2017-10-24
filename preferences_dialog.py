@@ -10,7 +10,14 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
 import configparser
-import os.path
+import os
+import subprocess   # для проверки наличия синтезаторов
+
+# модули программы
+# для чтения настроек синтезаторов
+import synth_conf.parser as SCP
+# диалог выбора синтезатора
+import select_synth_dialog as SSD
 
 class PreferencesDialog(Gtk.Window):
     """
@@ -43,28 +50,50 @@ class PreferencesDialog(Gtk.Window):
         self.on_check_tool_text_toggled(check_tool_text)
         #=====================================================================
 
-        # Вкладка с настройками параметров чтения
+        # Вкладка с выбором синтезатора и настройками параметров чтения
         #=====================================================================
         self.page_voice = Gtk.Grid()
         self.page_voice.set_border_width(10)
 
+        label_choose_synth = Gtk.Label('Синтезатор:')
+        self.page_voice.add(label_choose_synth)
+        combo_synth = Gtk.ComboBoxText()
+        # заполняем комбобокс и устанавливаем текущий синтезатор в нём
+        i = 0
+        for synth in self.PBR_Pref.list_of_synth:
+            combo_synth.append(str(i), synth[1])
+            if synth[1] == self.PBR_Pref.current_synth:
+                combo_synth.set_active(i)
+            i +=1
+        self.page_voice.attach_next_to(combo_synth, label_choose_synth,
+                                       Gtk.PositionType.RIGHT, 1, 1)
+        combo_synth.connect("changed", self.on_combo_synth_changed)
+
+        self.note = Gtk.Label()
+        self.page_voice.attach_next_to(self.note, label_choose_synth,
+                                       Gtk.PositionType.BOTTOM, 2, 1)
+        self.update_note()
+
+        separator = Gtk.Separator.new(0)
+        self.page_voice.attach_next_to(separator, self.note,
+                                       Gtk.PositionType.BOTTOM, 2, 1)
+        # добавим отступы
+        separator.props.margin_top = 5
+        separator.props.margin_bottom = 10
+
         label_voice_pref = Gtk.Label('Настройка параметров чтения:')
-        self.page_voice.add(label_voice_pref)
+        self.page_voice.attach_next_to(label_voice_pref, separator,
+                                       Gtk.PositionType.BOTTOM, 1, 1)
 
         label_choose_voice = Gtk.Label('Голос для чтения:')
         self.page_voice.attach_next_to(label_choose_voice, label_voice_pref,
                                        Gtk.PositionType.BOTTOM, 1, 1)
-        combo_voice = Gtk.ComboBoxText()
-        # заполняем комбобокс и устанавливаем текущий голос в нём
-        i = 0
-        for voice in self.PBR_Pref.list_of_voices:
-            combo_voice.append(str(i), voice)
-            if voice == self.PBR_Pref.current_voice:
-                combo_voice.set_active(i)
-            i +=1
-        self.page_voice.attach_next_to(combo_voice, label_choose_voice,
+        self.combo_voice = Gtk.ComboBoxText()
+        self.page_voice.attach_next_to(self.combo_voice, label_choose_voice,
                                        Gtk.PositionType.RIGHT, 1, 1)
-        combo_voice.connect("changed", self.on_combo_voice_changed)
+        self.combo_voice.connect("changed", self.on_combo_voice_changed)
+        # заполняем комбобокс и устанавливаем текущий голос в нём
+        self.upd_voices_combo()
 
         label_indent_delay = Gtk.Label('Задержка между абзацами, мс:')
         self.page_voice.attach_next_to(label_indent_delay,
@@ -107,29 +136,27 @@ class PreferencesDialog(Gtk.Window):
 
         self.show_all()
 
-    def exit_pref_win(self, data=None):
-        """ Выход из диалога """
-        # сохраняем настройки и выходим
-        self.PBR_Pref.save_settings()
-        self.destroy()
+    def on_combo_synth_changed(self, combo):
+        """ Переключение синтезатора """
+        self.SD_client.change_synth_conf(
+                    self.PBR_Pref.get_synth_filename(combo.get_active_text()))
+        self.PBR_Pref.current_synth = combo.get_active_text()
+        self.upd_voices_combo()
+        self.update_note()
 
     def on_combo_voice_changed(self, combo):
         """ Изменение голоса """
         combo_text = combo.get_active_text()
         if combo_text != None:
             self.SD_client.set_voice(combo_text)
-            self.PBR_Pref.current_voice = combo_text
 
     def on_check_tool_text_toggled(self, widget):
         """ Включение / отключение подписывания кнопок в панели управления """
-        # получаем ссылку на панель управления
-        toolbar = self.main_win.grid.get_child_at(0,1)
-        # включаем или отключаем текс у значков
-        if widget.get_active() == True and toolbar != None:
-            toolbar.set_style(2)
+        if widget.get_active() == True and self.main_win.toolbar != None:
+            self.main_win.toolbar.set_style(2)
             self.PBR_Pref.labels_for_toolbuttons = True
         else:
-            toolbar.set_style(0)
+            self.main_win.toolbar.set_style(0)
             self.PBR_Pref.labels_for_toolbuttons = False
 
     def on_spin_indent_delay_changed(self, widget):
@@ -140,16 +167,39 @@ class PreferencesDialog(Gtk.Window):
         """ Изменение задержки для предложения """
         self.PBR_Pref.sentance_delay = widget.get_value_as_int()
 
-class Preferences():
+    def upd_voices_combo(self):
+        """ Заполнение выпадающего меню голосами """
+        if self.SD_client.get_voices_list() != None:
+            i = 0
+            self.combo_voice.remove_all()
+            for voice in self.SD_client.get_voices_list():
+                self.combo_voice.append(str(i), voice)
+                if voice == self.SD_client.get_current_voice():
+                    self.combo_voice.set_active(i)
+                i +=1
+        else:
+            self.combo_voice.remove_all()
+
+    def update_note(self):
+        """ Обновление текста примечания """
+        if self.SD_client.get_synth_note() != '':
+            self.note.set_text("Примечание: " + self.SD_client.get_synth_note())
+            self.note.show()
+        else:
+            self.note.hide()
+
+    def exit_pref_win(self, data=None):
+        """ Выход из диалога настроек """
+        # сохраняем настройки и выходим
+        self.PBR_Pref.save_settings()
+        self.destroy()
+
+class Preferences(object):
     """
     Обработка настроек (хранение, чтение, запись)
-    TODO: добавить работу с файлом настроек
     """
-    def __init__(self, SD_client):
+    def __init__(self):
         """ Инициализация настроек """
-        # клиент speech-dispatcher для получения списка голосов
-        self.SD_client = SD_client
-
         # открываем файл конфигурации или создаём новый, если его нет
         self.config = configparser.ConfigParser()
         if not os.path.exists('pbr.conf'):
@@ -157,45 +207,38 @@ class Preferences():
         self.config.read('pbr.conf')
         self.settings = self.config['Settings']
 
-        # список доступных голосов
-        self.list_of_voices = self.SD_client.get_voices_list()
-        # текущий голос
-        self.current_voice = self.get_current_voice()
         # значения задержек для абзаца и предложения
         self.indent_delay = self.get_indent_delay()
         self.sentance_delay = self.get_sentance_delay()
         # показывать ли текст у кнопок на панели
         self.labels_for_toolbuttons = self.get_labels_for_toolbuttons()
-        # скорость чтения
-        self.speech_rate = self.get_speech_rate()
 
-        # Устанавливаем текущий голос
-        self.SD_client.set_voice(self.current_voice)
+        # список доступных синтезаторов
+        self.list_of_synth = self.get_list_of_synth()
+        # текущий синтезатор
+        self.current_synth = self.get_current_synth()
+
+        # если ещё не выбран синтезатор, просим его выбрать
+        if self.current_synth == None:
+            self.current_synth = self.select_synth()
 
     def set_default_conf(self):
         """ Установка настроек по умолчанию """
-        self.config['Settings'] = {'current_voice': 'Aleksandr+Alan',
-                                   'indent_delay': '400',
+        self.config['Settings'] = {'indent_delay': '400',
                                    'sentance_delay': '200', 
-                                   'speech_rate': '0', 
-                                   'labels_for_toolbuttons': 'True'}
+                                   'labels_for_toolbuttons': 'True', 
+                                   'current_synth': ''}
         with open('pbr.conf', 'w') as configfile:
             self.config.write(configfile)
 
     def save_settings(self):
         """ Сохранение настроек в файл """
-        self.config['Settings'] = {'current_voice': self.current_voice,
-                                   'indent_delay': self.indent_delay,
+        self.config['Settings'] = {'indent_delay': self.indent_delay,
                                    'sentance_delay': self.sentance_delay,
-                                   'speech_rate': self.speech_rate,
-                                   'labels_for_toolbuttons': self.labels_for_toolbuttons}
+                                   'labels_for_toolbuttons': self.labels_for_toolbuttons,
+                                    'current_synth': self.current_synth}
         with open('pbr.conf', 'w') as configfile:
             self.config.write(configfile)
-
-    def  get_current_voice(self):
-        """ Получаем текущий голос из conf файла """
-        voice = self.settings.get('current_voice')
-        return voice
 
     def  get_indent_delay(self):
         """ Получаем задержку чтения между абзацами из conf файла"""
@@ -212,7 +255,47 @@ class Preferences():
         labels = self.settings.getboolean('labels_for_toolbuttons')
         return labels
 
-    def get_speech_rate(self):
-        """ Получаем скорость чтения (-100 .. +100) из conf файла """
-        rate = self.settings.getint('speech_rate')
-        return rate
+    def get_current_synth(self):
+        """ Получаем текущий синтезатор из conf файла"""
+        try:
+            synth = self.settings.get('current_synth')
+            if synth == '': synth = None
+        except:
+            synth = None
+        return synth
+
+    def get_list_of_synth(self):
+        """ Создание списка доступных синтезаторов """
+        files = os.listdir('synth_conf')
+        # фильтруем по расширению ".conf"
+        list_of_synth_files = filter(lambda x: x.endswith('.conf'), files)
+        list_of_synth = []
+        for synth_file in list_of_synth_files:
+            synth_conf = SCP.SynthConfParser('synth_conf/' + synth_file)
+            # проверка на наличие синтезатора в системе
+            p = subprocess.Popen(["whereis", synth_conf.synth_cmd],
+                                 stdout=subprocess.PIPE)
+            stdout = p.communicate()
+            if stdout[0] != (synth_conf.synth_cmd+':\n').encode('utf-8'):
+                list_of_synth.append([synth_file, synth_conf.get_name()])
+
+        return list_of_synth
+
+    def get_synth_filename(self, synth_name):
+        """ Вычисление имени файла настроек по имени синтезатора """
+        for synth_record in self.list_of_synth:
+            if synth_name == synth_record[1]:
+                return synth_record[0]
+        return False
+
+    def select_synth(self):
+        """ Выбор синтезатора """
+        dialog = SSD.SelectSynthDialog(self)
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            synth = dialog.get_synth()
+            dialog.destroy()
+            return synth
+        else:
+            dialog.destroy()
+            return None
